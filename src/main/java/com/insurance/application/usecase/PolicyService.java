@@ -41,6 +41,7 @@ public class PolicyService {
      * @throws ValidationException si las fechas son inválidas
      * @throws BusinessRuleException si se viola una regla de negocio
      */
+    @SuppressWarnings("null")
     public PolicyResponse createPolicy(PolicyCreateRequest request) {
         // Validar que el cliente existe
         Client client = clientRepository.findById(request.getClientId())
@@ -94,6 +95,7 @@ public class PolicyService {
      * @throws ResourceNotFoundException si la póliza no existe
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public PolicyResponse getPolicyById(Long id) {
         Policy policy = policyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Póliza", id));
@@ -107,6 +109,7 @@ public class PolicyService {
      * @return lista de DTOs de pólizas
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<PolicyResponse> getPoliciesByClientId(Long clientId) {
         if (!clientRepository.existsById(clientId)) {
             throw new ResourceNotFoundException("Cliente", clientId);
@@ -124,6 +127,7 @@ public class PolicyService {
      * @return lista de DTOs de pólizas del tipo especificado
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<PolicyResponse> getPoliciesByClientAndType(Long clientId, String policyType) {
         if (!clientRepository.existsById(clientId)) {
             throw new ResourceNotFoundException("Cliente", clientId);
@@ -142,6 +146,7 @@ public class PolicyService {
      * @return DTO de la póliza actualizada
      * @throws ResourceNotFoundException si la póliza no existe
      */
+    @SuppressWarnings("null")
     public PolicyResponse updatePolicyStatus(Long id, String newStatus) {
         Policy policy = policyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Póliza", id));
@@ -157,6 +162,7 @@ public class PolicyService {
      * @param id identificador de la póliza
      * @throws ResourceNotFoundException si la póliza no existe
      */
+    @SuppressWarnings("null")
     public void deletePolicy(Long id) {
         if (!policyRepository.existsById(id)) {
             throw new ResourceNotFoundException("Póliza", id);
@@ -173,6 +179,7 @@ public class PolicyService {
      * @throws ResourceNotFoundException si la póliza no existe
      * @throws BusinessRuleException si la póliza no es de VIDA o ya tiene 2 beneficiarios
      */
+    @SuppressWarnings("null")
     public BeneficiaryResponse addBeneficiary(Long policyId, BeneficiaryCreateRequest request) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Póliza", policyId));
@@ -206,6 +213,7 @@ public class PolicyService {
      * @throws ResourceNotFoundException si la póliza no existe
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<BeneficiaryResponse> getBeneficiariesByPolicyId(Long policyId) {
         if (!policyRepository.existsById(policyId)) {
             throw new ResourceNotFoundException("Póliza", policyId);
@@ -225,6 +233,7 @@ public class PolicyService {
      * @throws BusinessRuleException si la póliza no es de VEHICULO
      * @throws BusinessRuleException si la placa ya está registrada
      */
+    @SuppressWarnings("null")
     public VehicleResponse addVehicle(Long policyId, VehicleCreateRequest request) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Póliza", policyId));
@@ -259,6 +268,7 @@ public class PolicyService {
      * @throws ResourceNotFoundException si la póliza no existe
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<VehicleResponse> getVehiclesByPolicyId(Long policyId) {
         if (!policyRepository.existsById(policyId)) {
             throw new ResourceNotFoundException("Póliza", policyId);
@@ -277,6 +287,7 @@ public class PolicyService {
      * @throws ResourceNotFoundException si la póliza no existe
      * @throws BusinessRuleException si la póliza no es de SALUD
      */
+    @SuppressWarnings("null")
     public DependentResponse addDependent(Long policyId, DependentCreateRequest request) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Póliza", policyId));
@@ -305,6 +316,7 @@ public class PolicyService {
      * @throws ResourceNotFoundException si la póliza no existe
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<DependentResponse> getDependentsByPolicyId(Long policyId) {
         if (!policyRepository.existsById(policyId)) {
             throw new ResourceNotFoundException("Póliza", policyId);

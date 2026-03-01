@@ -85,14 +85,14 @@ public class SecurityConfig {
                 // Configuración de autorización
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints públicos
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/info").permitAll()
                         
                         // Endpoints de lectura permitida
-                        .requestMatchers(HttpMethod.GET, "/api/v1/clients/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/policies/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/clients/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/policies/**").permitAll()
                         
                         // Todos los demás requieren autenticación
                         .anyRequest().authenticated()

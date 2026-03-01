@@ -43,6 +43,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should process valid token and set SecurityContext")
+    @SuppressWarnings("null")
     void testDoFilterInternal_ValidToken() throws ServletException, IOException {
         // Arrange
         String validToken = "valid-token";
@@ -63,6 +64,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should skip filter when no Authorization header")
+    @SuppressWarnings("null")
     void testDoFilterInternal_NoAuthorizationHeader() throws ServletException, IOException {
         // Arrange
         when(request.getHeader("Authorization")).thenReturn(null);
@@ -77,6 +79,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should skip filter when Authorization header without Bearer prefix")
+    @SuppressWarnings("null")
     void testDoFilterInternal_NoBearerPrefix() throws ServletException, IOException {
         // Arrange
         when(request.getHeader("Authorization")).thenReturn("Basic dXNlcjpwYXNzd29yZA==");
@@ -91,6 +94,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should skip filter when token validation fails")
+    @SuppressWarnings("null")
     void testDoFilterInternal_InvalidToken() throws ServletException, IOException {
         // Arrange
         String invalidToken = "invalid-token";
@@ -109,6 +113,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should handle exception during token validation")
+    @SuppressWarnings("null")
     void testDoFilterInternal_ExceptionDuringValidation() throws ServletException, IOException {
         // Arrange
         String token = "token";
@@ -127,6 +132,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should handle empty Authorization header")
+    @SuppressWarnings("null")
     void testDoFilterInternal_EmptyAuthorizationHeader() throws ServletException, IOException {
         // Arrange
         when(request.getHeader("Authorization")).thenReturn("");
@@ -141,6 +147,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     @DisplayName("Should handle whitespace in Authorization header")
+    @SuppressWarnings("null")
     void testDoFilterInternal_WhitespaceInHeader() throws ServletException, IOException {
         // Arrange
         when(request.getHeader("Authorization")).thenReturn("   ");

@@ -116,6 +116,44 @@ Se aplica manejo centralizado de excepciones para responder de forma consistente
 
 ---
 
+## Tecnologías
+
+El proyecto utiliza las siguientes tecnologías y versiones:
+
+### Core
+- **Java**: 17
+- **Spring Boot**: 3.2.0
+- **Maven**: 3.8+ (recomendado 3.9+)
+
+### Dependencias principales
+- **Spring Boot Starter Web**: Web API REST
+- **Spring Boot Starter Data JPA**: Persistencia y ORM
+- **Spring Boot Starter Validation**: Validación de datos
+- **Spring Boot Starter Security**: Seguridad y autenticación
+- **H2 Database**: Base de datos en memoria
+- **Lombok**: Reducción de código boilerplate
+
+### Documentación
+- **SpringDoc OpenAPI**: 2.1.0 (Swagger UI)
+
+### Seguridad
+- **JJWT (JSON Web Token)**: 0.11.5
+  - jjwt-api
+  - jjwt-impl
+  - jjwt-jackson
+
+### Testing
+- **Spring Boot Starter Test**: Testing framework
+- **Mockito Core**: Mocking framework
+- **Mockito JUnit Jupiter**: Integración JUnit 5
+- **JaCoCo**: 0.8.10 (Cobertura de código)
+- **Maven Surefire Plugin**: 3.1.2 (Ejecución de tests)
+
+### Utilidades
+- **Apache Commons Lang3**: 3.14.0
+
+---
+
 ## API y documentación
 
 La API se documenta con **OpenAPI/Swagger**.
