@@ -253,7 +253,203 @@ Respuesta esperada:
 
 ---
 
-## 📚 API REST - Documentación
+## � Autenticación y Seguridad
+
+### Overview
+La aplicación utiliza **Spring Security 3.2.0** con autenticación basada en **JWT (JSON Web Tokens)** para proteger los endpoints. El flujo de autenticación es:
+
+1. Usuario se registra o hace login
+2. Sistema valida credenciales contra base de datos
+3. Genera un JWT firmado (HS512) con expiración configurable
+4. Cliente incluye el JWT en todas las peticiones posteriores
+5. Sistema valida el token en cada request
+
+### Configuración (Variables de Entorno)
+
+Edita el archivo `.env` en la raíz del proyecto (copiado de `.env.example`):
+
+```bash
+# JWT Configuration
+JWT_SECRET=your-super-secret-key-min-32-characters-long-for-HS512
+JWT_EXPIRATION=86400000    # Access token: 24 horas en millisegundos
+JWT_REFRESH_EXPIRATION=604800000  # Refresh token: 7 días
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,http://localhost:4200
+CORS_METHODS=GET,POST,PUT,DELETE,OPTIONS
+CORS_HEADERS=*
+CORS_MAX_AGE=3600
+
+# Security Headers
+SECURITY_HEADERS_ENABLED=true
+```
+
+### Roles de Usuario
+
+| Rol | Autoridad | Descripción |
+|-----|-----------|-------------|
+| ADMIN | ROLE_ADMIN | Administrador del sistema |
+| AGENT | ROLE_AGENT | Agente de seguros |
+| CUSTOMER | ROLE_CUSTOMER | Cliente del seguro |
+
+### Endpoints de Autenticación
+
+#### 1. **POST /api/v1/auth/register** - Registrar nuevo usuario
+
+Crea un nuevo usuario en el sistema.
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com",
+    "password": "MiContraseña123!",
+    "confirmPassword": "MiContraseña123!",
+    "fullName": "Juan Pérez García"
+  }'
+```
+
+**Respuesta (201 Created):**
+```json
+{
+  "message": "Usuario registrado exitosamente",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzUxMiJ9...",
+    "refresh_token": "eyJhbGciOiJIUzUxMiJ9...",
+    "token_type": "Bearer",
+    "expires_in": 86400,
+    "username": "usuario@example.com",
+    "email": "usuario@example.com"
+  }
+}
+```
+
+**Validaciones:**
+- Email único y válido (formato RFC 5322)
+- Contraseña mínimo 8 caracteres
+- Las dos contraseñas deben coincidir
+- Nombre completo entre 2 y 100 caracteres
+
+---
+
+#### 2. **POST /api/v1/auth/login** - Login con credenciales
+
+Autentica un usuario existente.
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com",
+    "password": "MiContraseña123!"
+  }'
+```
+
+**Respuesta (200 OK):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c3VhcmlvQGV4YW1wbGUuY29tIiwiaWF0IjoxNjc3NjAwMDAwLCJleHAiOjE2Nzc2ODYwMDB9...",
+  "refresh_token": "eyJhbGciOiJIUzUxMiJ9...",
+  "token_type": "Bearer",
+  "expires_in": 86400,
+  "username": "usuario@example.com",
+  "email": "usuario@example.com"
+}
+```
+
+**Respuestas de error:**
+- `401 Unauthorized` - Email o contraseña inválidos
+- `400 Bad Request` - Datos incompletos o inválidos
+
+---
+
+#### 3. **POST /api/v1/auth/refresh** - Refrescar token
+
+Obtiene un nuevo access_token usando el refresh_token (sin necesidad de login).
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzUxMiJ9..."
+  }'
+```
+
+**Respuesta (200 OK):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzUxMiJ9.NEW_TOKEN...",
+  "refresh_token": "eyJhbGciOiJIUzUxMiJ9...",
+  "token_type": "Bearer",
+  "expires_in": 86400,
+  "username": "usuario@example.com"
+}
+```
+
+---
+
+#### 4. **GET /api/v1/auth/validate** - Validar token
+
+Verifica si un JWT token es válido y no ha expirado.
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/auth/validate?token=eyJhbGciOiJIUzUxMiJ9..."
+```
+
+**Respuesta (200 OK):**
+```json
+true
+```
+
+---
+
+#### 5. **POST /api/v1/auth/logout** - Logout
+
+Invalida la sesión del usuario (basado en cliente borrar el token).
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/logout \
+  -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9..."
+```
+
+**Respuesta (200 OK):** No tiene contenido
+
+---
+
+### Cómo usar el JWT en las peticiones
+
+Después de obtener el token, inclúyelo en el header `Authorization` de todas las peticiones:
+
+```bash
+curl -X GET http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c3VhcmlvQGV4YW1wbGUuY29tIiwiaWF0IjoxNjc3NjAwMDAwLCJleHAiOjE2Nzc2ODYwMDB9..."
+```
+
+**Si el token es inválido o expirado:**
+- `401 Unauthorized` - Token inválido, expirado o ausente
+
+---
+
+### Endpoints Protegidos vs Públicos
+
+| Endpoint | Protección | Token Requerido |
+|----------|-----------|-----------------|
+| POST /auth/register | Público | ❌ No |
+| POST /auth/login | Público | ❌ No |
+| POST /auth/refresh | Público | ❌ No |
+| GET /auth/validate | Público | ❌ No |
+| POST /auth/logout | Público | ❌ No (Informativo) |
+| GET /api/v1/clients | Público | ❌ No (Solo lectura) |
+| GET /api/v1/policies | Público | ❌ No (Solo lectura) |
+| POST /api/v1/clients | 🔒 Protegido | ✅ Sí |
+| PUT /api/v1/clients/{id} | 🔒 Protegido | ✅ Sí |
+| DELETE /api/v1/clients/{id} | 🔒 Protegido | ✅ Sí |
+| POST /api/v1/policies | 🔒 Protegido | ✅ Sí |
+| PUT /api/v1/policies/{id} | 🔒 Protegido | ✅ Sí |
+
+---
+
+## �📚 API REST - Documentación
 
 ### Swagger/OpenAPI
 
