@@ -1,302 +1,328 @@
 # Insurance Policy Service
 
-**Backend REST para gestión de clientes y pólizas de seguros.**
-
-## 📋 Tabla de Contenidos
-
-1. [Solución Planteada](#solución-planteada)
-2. [Modelo de Datos](#modelo-de-datos)
-3. [Arquitectura](#arquitectura)
-4. [Instalación y Ejecución Local](#instalación-y-ejecución-local)
-5. [API REST - Documentación](#api-rest-documentación)
-6. [Pruebas](#pruebas)
-7. [Arquitectura AWS Propuesta](#arquitectura-aws-propuesta)
-8. [Stack Tecnológico](#stack-tecnológico)
+Servicio backend (API REST) para la gestión de **clientes** y **pólizas de seguros** (Vida, Vehículo y Salud), desarrollado como solución para una prueba técnica. La implementación incluye persistencia local (H2), validación de reglas de negocio, manejo centralizado de errores, documentación con OpenAPI/Swagger y pruebas unitarias.
 
 ---
 
-## 🎯 Solución Planteada
+## Tabla de contenidos
 
-### Contexto
-Esta es una solución de **backend para una aseguradora grande (+40M clientes)** que necesita gestionar:
-- Clientes (personas aseguradas)
-- Pólizas de seguros con múltiples tipos (Vida, Vehículo, Salud)
-- Relaciones complejas (beneficiarios, vehículos, dependientes)
-- Validaciones de reglas de negocio
-
-### Decisiones Técnicas
-
-| Decisión | Justificación |
-|----------|--------------|
-| **Spring Boot 3.2** | Framework maduro, escalable, con excelente soporte para REST y JPA |
-| **H2 Database (en memoria)** | Facilita desarrollo/testing sin requerir BD externa. Portable para demostración. |
-| **Spring Data JPA** | ORM estándar, reduce boilerplate, permite migraciones automáticas |
-| **Lombok** | Reduce código repetitivo (getters, setters, constructores, toString) |
-| **SpringDoc OpenAPI** | Generación automática de Swagger/OpenAPI 3.0 con documentación integrada |
-| **Validaciones en Service** | Lógica de negocio centralizada, fácil de testear y mantener |
-| **@ControllerAdvice** | Manejo centralizado de excepciones, respuestas HTTP normalizadas |
-| **JUnit 5 + Mockito** | Testing estándar en Java, cobertura de 80%+ esperada |
-
-### Reglas de Negocio Implementadas
-
-✅ **Póliza de Vida**
-- Solo 1 póliza de Vida por cliente
-- Máximo 2 beneficiarios por póliza
-- Validación al crear (lanza excepción 400 si ya existe)
-
-✅ **Póliza de Vehículo**
-- N vehículos por póliza (o múltiples pólizas)
-- Placa única en el sistema
-
-✅ **Póliza de Salud**
-- Modelado de dependientes por relación (Cliente, Padre, Madre, Cónyuge, Hijo)
-- Tarifa por dependiente
-- Listado de beneficiarios/dependientes por póliza
-
-✅ **Clientes**
-- Documento único (tipoDocumento + numeroDocumento)
-- Email único
-- Datos personales completos
+- [Alcance de la solución](#alcance-de-la-solución)
+- [Reglas de negocio](#reglas-de-negocio)
+- [Modelo de datos](#modelo-de-datos)
+- [Arquitectura](#arquitectura)
+- [API y documentación](#api-y-documentación)
+- [Ejecución local](#ejecución-local)
+- [Pruebas](#pruebas)
+- [Propuesta de despliegue en AWS](#propuesta-de-despliegue-en-aws)
 
 ---
 
-## 📊 Modelo de Datos
+## Alcance de la solución
 
-### Diagrama de Entidades (Conceptual)
+La API cubre las operaciones mínimas solicitadas para:
 
-```
-┌─────────────┐
-│   Client    │
-├─────────────┤
-│ id (PK)     │
-│ tipoDoc     │ ← Único (con numeroDocumento)
-│ numeroDoc   │ ← Único (con tipoDocumento)
-│ nombres     │
-│ apellidos   │
-│ email       │ ← Único
-│ teléfono    │
-│ fechaNac    │
-│ createdAt   │
-│ updatedAt   │
-└──────┬──────┘
-       │ 1:N
-       │
-   ┌───┴─────────┐
-   │   Policy    │
-   ├─────────────┤
-   │ id (PK)     │
-   │ policyNo    │ ← Único
-   │ type        │ ← ENUM (VIDA/VEHICULO/SALUD)
-   │ clientId(FK)│
-   │ startDate   │
-   │ endDate     │
-   │ premium     │
-   │ status      │
-   │ createdAt   │
-   │ updatedAt   │
-   └──┬──────────┘
-      │
-      ├─→ 1:N Beneficiary (VIDA)
-      ├─→ 1:N Vehicle (VEHICULO)
-      └─→ 1:N Dependent (SALUD)
-```
+- **Clientes**
+  - Crear, consultar, actualizar y eliminar.
+- **Pólizas**
+  - Crear pólizas asociadas a un cliente.
+  - Listar pólizas por cliente.
+  - Consultar el detalle de una póliza.
+  - Listar beneficiarios/dependientes asociados a pólizas de salud.
 
-### Tablas Principales
-
-| Tabla | Descripción | Relaciones |
-|-------|-------------|-----------|
-| `clients` | Personas aseguradas | PK: id, UK: tipoDocumento+numeroDocumento, UK: email |
-| `policies` | Pólizas de seguros | FK: client_id, ENUM: policy_type |
-| `beneficiaries` | Beneficiarios de pólizas de Vida | FK: policy_id (max 2 per policy) |
-| `vehicles` | Vehículos asegurados | FK: policy_id, UK: plate |
-| `dependents` | Dependientes de pólizas de Salud | FK: policy_id |
-
-### Validaciones en Base de Datos
-
-- **Unique Constraints**: tipoDocumento+numeroDocumento, email (clientes); policyNumber (pólizas); plate (vehículos)
-- **Foreign Keys**: Cascada elimina pólizas/beneficiarios/vehículos cuando se elimina cliente
-- **Check Constraints** (en BD): startDate < endDate, premium > 0 (en aplicación)
+La persistencia se realiza en una base de datos **H2** para facilitar la ejecución local sin dependencias externas.
 
 ---
 
-## 🏗️ Arquitectura
+## Reglas de negocio
 
-### Estructura de Capas (Clean Architecture)
+La capa de aplicación valida las reglas principales descritas en el enunciado:
 
-```
-com.insurance
-├── domain/                      ← LOGICA DE NEGOCIO PURA
-│   ├── model/                   (Entidades JPA, ValueObjects, Enums)
-│   │   ├── Client.java
-│   │   ├── Policy.java
-│   │   ├── PolicyType.java
-│   │   ├── Beneficiary.java
-│   │   ├── Vehicle.java
-│   │   └── Dependent.java
-│   ├── service/                 (Servicios de dominio - opcional si hay lógica)
-│   └── repository/              (Interfaces de acceso a datos)
-│       ├── ClientRepository.java
-│       ├── PolicyRepository.java
-│       ├── BeneficiaryRepository.java
-│       ├── VehicleRepository.java
-│       └── DependentRepository.java
-│
-├── application/                 ← CASOS DE USO / ORQUESTACION
-│   ├── usecase/
-│   │   ├── ClientService.java   (CRUD clientes, validaciones)
-│   │   └── PolicyService.java   (CRUD pólizas, reglas negocio)
-│   └── dto/                     (DTOs para REST: Requests/Responses)
-│       ├── ClientCreateRequest.java
-│       ├── ClientResponse.java
-│       ├── PolicyCreateRequest.java
-│       ├── PolicyResponse.java
-│       ├── BeneficiaryCreateRequest.java
-│       ├── BeneficiaryResponse.java
-│       ├── VehicleCreateRequest.java
-│       ├── VehicleResponse.java
-│       ├── DependentCreateRequest.java
-│       ├── DependentResponse.java
-│       └── ErrorResponse.java
-│
-├── infrastructure/              ← DETALLES TECNICOS
-│   ├── rest/                    (Controllers REST)
-│   │   ├── ClientController.java
-│   │   ├── PolicyController.java
-│   │   └── HealthController.java
-│   ├── persistence/             (JPA, mappers - aquí vivirían custom mappers si aplica)
-│   └── config/                  (Configuraciones Spring)
-│       └── GlobalExceptionHandler.java
-│
-└── shared/                      ← UTILERIAS COMPARTIDAS
-    ├── exception/               (Excepciones personalizadas)
-    │   ├── InsuranceException.java
-    │   ├── ResourceNotFoundException.java
-    │   ├── BusinessRuleException.java
-    │   └── ValidationException.java
-    └── utils/                   (Utilidades generales)
-```
+### Póliza de Vida
+- Un cliente puede tener **máximo 1 póliza de vida**.
+- Una póliza de vida admite **máximo 2 beneficiarios**.
 
-### Flujo de una Solicitud HTTP
+### Póliza de Vehículo
+- Un cliente puede asegurar **N vehículos**, ya sea en una póliza o en múltiples pólizas (dependiendo de la forma de creación).
+- La placa del vehículo se maneja como un dato relevante para evitar duplicidades según el diseño implementado.
 
-```
-CLIENT
-  │
-  ├─→ HTTP POST /api/v1/clients
-  │
-  ├─→ ClientController.createClient()
-  │
-  ├─→ ClientService.createClient()
-  │   ├─ Validar datos
-  │   ├─ Verificar documento único
-  │   ├─ Verificar email único
-  │   └─ Persistir con ClientRepository
-  │
-  ├─ Si error → GlobalExceptionHandler
-  │   └─ ErrorResponse (400/404/500)
-  │
-  └─ Si éxito → ClientResponse (201)
-```
+### Póliza de Salud
+La póliza de salud permite modelar coberturas típicas:
+- Solo cliente.
+- Cliente + padres.
+- Cliente + cónyuge + hijos.
+
+> Nota: el objetivo de esta entrega es el modelado/gestión y la validación de estructura del grupo cubierto. Si existiera cálculo de tarifas, se podría extender como una regla adicional de dominio.
 
 ---
 
-## 🚀 Instalación y Ejecución Local
+## Modelo de datos
 
-### Requisitos Previos
+### Entidades principales
+- **Client**
+- **Policy**
+- **Beneficiary** (para Vida)
+- **Vehicle** (para Vehículo)
+- **Dependent** (para Salud)
 
-- **Java 17+** ([descargar](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html))
-- **Maven 3.8+** ([descargar](https://maven.apache.org/download.cgi))
-- **Git** (opcional, para clonar)
+Relación base:
+- Un **Client** tiene **N Policy**.
 
-### Pasos de Instalación
+Relaciones por tipo:
+- **Policy (Vida)** → 1:N **Beneficiary**
+- **Policy (Vehículo)** → 1:N **Vehicle**
+- **Policy (Salud)** → 1:N **Dependent**
 
-#### 1. Clonar o descargar el proyecto
+### Reglas de integridad (sugeridas)
+Dependiendo de tu implementación, es común aplicar:
+- `unique(tipoDocumento, numeroDocumento)` en clientes.
+- `unique(email)` en clientes (si aplica).
+- `unique(policyNumber)` en pólizas (si generas número de póliza).
+- `unique(plate)` en vehículos (si decides unicidad global).
+
+---
+
+## Arquitectura
+
+El proyecto sigue un enfoque inspirado en **DDD (DDD-lite)**, priorizando separación de responsabilidades sin sobredimensionar la solución para una prueba técnica:
+
+- **Domain**: entidades, enums y reglas/invariantes clave.
+- **Application**: casos de uso (servicios) y DTOs.
+- **Infrastructure**: controladores REST, configuración, persistencia JPA y adaptadores.
+
+Estructura típica:
+
+```
+src/main/java/com/insurance
+  ├── domain
+  │   ├── model
+  │   └── repository        (interfaces)
+  ├── application
+  │   ├── service           (casos de uso)
+  │   └── dto               (request/response)
+  ├── infrastructure
+  │   ├── rest              (controllers)
+  │   ├── persistence        (repositorios JPA / mappers)
+  │   └── config            (manejo de errores, OpenAPI)
+  └── shared
+      └── exception         (excepciones de negocio)
+```
+
+### Manejo de errores y códigos HTTP
+Se aplica manejo centralizado de excepciones para responder de forma consistente:
+- **200/201**: operación exitosa.
+- **400**: validaciones de entrada o reglas de negocio.
+- **404**: recurso no encontrado (cliente/póliza).
+- **500**: error no controlado.
+
+---
+
+## Tecnologías
+
+El proyecto utiliza las siguientes tecnologías y versiones:
+
+### Core
+- **Java**: 17
+- **Spring Boot**: 3.2.0
+- **Maven**: 3.8+ (recomendado 3.9+)
+
+### Dependencias principales
+- **Spring Boot Starter Web**: Web API REST
+- **Spring Boot Starter Data JPA**: Persistencia y ORM
+- **Spring Boot Starter Validation**: Validación de datos
+- **Spring Boot Starter Security**: Seguridad y autenticación
+- **H2 Database**: Base de datos en memoria
+- **Lombok**: Reducción de código boilerplate
+
+### Documentación
+- **SpringDoc OpenAPI**: 2.1.0 (Swagger UI)
+
+### Seguridad
+- **JJWT (JSON Web Token)**: 0.11.5
+  - jjwt-api
+  - jjwt-impl
+  - jjwt-jackson
+
+### Testing
+- **Spring Boot Starter Test**: Testing framework
+- **Mockito Core**: Mocking framework
+- **Mockito JUnit Jupiter**: Integración JUnit 5
+- **JaCoCo**: 0.8.10 (Cobertura de código)
+- **Maven Surefire Plugin**: 3.1.2 (Ejecución de tests)
+
+### Utilidades
+- **Apache Commons Lang3**: 3.14.0
+
+---
+
+## API y documentación
+
+La API se documenta con **OpenAPI/Swagger**.
+
+Una vez la app esté ejecutándose, la documentación estará disponible en una de estas rutas (según tu configuración):
+- `http://localhost:8080/swagger-ui.html`
+- `http://localhost:8080/swagger-ui/index.html`
+
+### Endpoints esperados (referencia)
+> Ajusta los paths a los que realmente tengas en tu código; dejo una guía típica.
+
+**Clientes**
+- `POST   /api/v1/clients`
+- `GET    /api/v1/clients/{id}`
+- `PUT    /api/v1/clients/{id}`
+- `DELETE /api/v1/clients/{id}`
+- `GET    /api/v1/clients`
+
+**Pólizas**
+- `POST /api/v1/policies`
+- `GET  /api/v1/policies/{id}`
+- `GET  /api/v1/policies/client/{clientId}`
+
+**Salud (dependientes)**
+- `GET /api/v1/policies/{policyId}/dependents`
+
+---
+
+## Ejecución local
+
+### Requisitos
+- Java 17+
+- Maven 3.8+
+- Git (opcional)
+
+### Clonar el repositorio
 ```bash
-cd c:\Users\diego\OneDrive\Documentos\Documentos\ Personales\Prueba\ Tecnica\insurance-policy-service
+git clone https://github.com/diegoalbanovoa/insurance-policy-service.git
+cd insurance-policy-service
 ```
 
-#### 2. Compilar el proyecto
+### Compilar
 ```bash
 mvn clean install
 ```
 
-Esto descargará las dependencias y compilará el código. Si es la primera vez, puede tardar algunos minutos.
-
-#### 3. Ejecutar la aplicación
-
-**Opción A: Desde Maven**
+### Ejecutar
 ```bash
 mvn spring-boot:run
 ```
 
-**Opción B: Desde JAR compilado**
-```bash
-java -jar target/insurance-policy-service-1.0.0.jar
-```
+La aplicación queda disponible en:
+- `http://localhost:8080`
 
-#### 4. Verificar que está corriendo
-
-La aplicación se levanta en `http://localhost:8080` (configurable en `application.properties`).
-
-**Health Check:**
-```bash
-curl http://localhost:8080/api/v1/health
-```
-
-Respuesta esperada:
-```json
-{
-  "status": "UP",
-  "service": "Insurance Policy Service",
-  "version": "1.0.0"
-}
-```
+> Si usas H2 en memoria, los datos se reinician en cada ejecución.
 
 ---
 
-## 📚 API REST - Documentación
+## Ejemplos de API
 
-### Swagger/OpenAPI
+A continuación se muestran ejemplos ordenados de cómo usar todos los endpoints del sistema. Se recomienda ejecutarlos en este orden para probar el flujo completo.
 
-Una vez la app está corriendo, accede a:
+### 1. Registro de usuario
 
-🔗 **http://localhost:8080/swagger-ui.html**
+Crea una nueva cuenta de usuario que será utilizada para autenticar futuras peticiones.
 
-Aquí verás:
-- Todos los endpoints agrupados por tags (Clientes, Pólizas, Health)
-- Esquemas de request/response
-- Ejemplos de payloads
-- Botón "Try it out" para probar endpoints
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan.perez@insurance.com",
+    "password": "SecurePass123!",
+    "confirmPassword": "SecurePass123!",
+    "fullName": "Juan Pérez García"
+  }'
+```
 
-### Endpoints Principales
+**Respuesta (201 Created):**
+```json
+{
+  "message": "Usuario registrado exitosamente. Puede iniciar sesión inmediatamente.",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+    "refreshToken": "eyJhbGciOiJIUzUxMiJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "username": "juan.perez@insurance.com",
+    "email": "juan.perez@insurance.com"
+  }
+}
+```
 
-#### **CLIENTES**
+**Nota importante:** Guardar el `accessToken` para usarlo en futuras peticiones en el header `Authorization: Bearer {accessToken}`.
 
-| Método | Endpoint | Descripción | Respuesta |
-|--------|----------|-------------|-----------|
-| POST | `/api/v1/clients` | Crear cliente | 201 Created |
-| GET | `/api/v1/clients/{id}` | Obtener cliente | 200 OK |
-| GET | `/api/v1/clients` | Listar clientes | 200 OK |
-| GET | `/api/v1/clients/search?tipoDocumento=CC&numeroDocumento=1234567890` | Buscar por documento | 200 OK |
-| PUT | `/api/v1/clients/{id}` | Actualizar cliente | 200 OK |
-| DELETE | `/api/v1/clients/{id}` | Eliminar cliente | 204 No Content |
+### 2. Login
 
-**Ejemplo: Crear Cliente**
+Autentica un usuario existente usando email y contraseña.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan.perez@insurance.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+**Respuesta (200 OK):**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzUxMiJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 86400000,
+  "username": "juan.perez@insurance.com",
+  "email": "juan.perez@insurance.com"
+}
+```
+
+### 3. Renovar token
+
+Obtiene un nuevo `accessToken` usando el `refreshToken` (válido 7 días sin necesidad de volver a fazer login).
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzUxMiJ9..."
+  }'
+```
+
+### 4. Validar token
+
+Verifica si un JWT token es válido y no ha expirado.
+
+**curl:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/auth/validate?token=eyJhbGciOiJIUzUxMiJ9..."
+```
+
+**Respuesta:**
+```
+true
+```
+
+### 5. Crear cliente
+
+Registra un nuevo cliente en el sistema. **Requiere autenticación JWT**.
+
+**curl:**
 ```bash
 curl -X POST http://localhost:8080/api/v1/clients \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
   -d '{
     "tipoDocumento": "CC",
     "numeroDocumento": "1234567890",
     "nombres": "Juan",
     "apellidos": "Pérez García",
-    "email": "juan.perez@example.com",
-    "telefono": "+57 3001234567",
+    "email": "juan.perez@insurance.com",
+    "telefono": "+573201234567",
     "fechaNacimiento": "1990-05-15"
   }'
 ```
 
-**Respuesta (201):**
+**Respuesta (201 Created):**
 ```json
 {
   "id": 1,
@@ -304,8 +330,8 @@ curl -X POST http://localhost:8080/api/v1/clients \
   "numeroDocumento": "1234567890",
   "nombres": "Juan",
   "apellidos": "Pérez García",
-  "email": "juan.perez@example.com",
-  "telefono": "+57 3001234567",
+  "email": "juan.perez@insurance.com",
+  "telefono": "+573201234567",
   "fechaNacimiento": "1990-05-15",
   "fullName": "Juan Pérez García",
   "createdAt": "2026-02-28",
@@ -313,27 +339,65 @@ curl -X POST http://localhost:8080/api/v1/clients \
 }
 ```
 
-#### **PÓLIZAS**
+### 6. Obtener cliente por ID
 
-| Método | Endpoint | Descripción | Respuesta |
-|--------|----------|-------------|-----------|
-| POST | `/api/v1/policies` | Crear póliza | 201 Created |
-| GET | `/api/v1/policies/{id}` | Obtener póliza | 200 OK |
-| GET | `/api/v1/policies/client/{clientId}` | Listar pólizas de cliente | 200 OK |
-| GET | `/api/v1/policies/client/{clientId}/type/{type}` | Listar por tipo | 200 OK |
-| POST | `/api/v1/policies/{policyId}/beneficiaries` | Agregar beneficiario (VIDA) | 201 Created |
-| GET | `/api/v1/policies/{policyId}/beneficiaries` | Listar beneficiarios (VIDA) | 200 OK |
-| POST | `/api/v1/policies/{policyId}/vehicles` | Agregar vehículo (VEHICULO) | 201 Created |
-| POST | `/api/v1/policies/{policyId}/dependents` | Agregar dependiente (SALUD) | 201 Created |
-| GET | `/api/v1/policies/{policyId}/dependents` | Listar dependientes (SALUD) | 200 OK |
-| PUT | `/api/v1/policies/{id}/status?status=CANCELADA` | Cambiar estado | 200 OK |
-| DELETE | `/api/v1/policies/{id}` | Eliminar póliza | 204 No Content |
+Recupera los datos de un cliente específico.
 
-**Ejemplo: Crear Póliza de Vida**
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/clients/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
 
+### 7. Listar todos los clientes
+
+Obtiene la lista completa de clientes registrados.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 8. Buscar cliente por documento
+
+Encuentra un cliente usando su tipo y número de documento.
+
+**curl:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/clients/document/CC/1234567890" \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 9. Actualizar cliente
+
+Modifica los datos de un cliente existente.
+
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/clients/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "tipoDocumento": "CC",
+    "numeroDocumento": "1234567890",
+    "nombres": "Juan",
+    "apellidos": "Pérez García",
+    "email": "juan.perez.actualizado@insurance.com",
+    "telefono": "+573209876543",
+    "fechaNacimiento": "1990-05-15"
+  }'
+```
+
+### 10. Crear póliza de Vida
+
+Crea una póliza de vida para un cliente. **Un cliente puede tener máximo 1 póliza de vida**.
+
+**curl:**
 ```bash
 curl -X POST http://localhost:8080/api/v1/policies \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
   -d '{
     "clientId": 1,
     "policyType": "VIDA",
@@ -344,7 +408,7 @@ curl -X POST http://localhost:8080/api/v1/policies \
   }'
 ```
 
-**Respuesta (201):**
+**Respuesta (201 Created):**
 ```json
 {
   "id": 1,
@@ -365,334 +429,169 @@ curl -X POST http://localhost:8080/api/v1/policies \
 }
 ```
 
-**Ejemplo: Agregar Beneficiario a Póliza de Vida**
+### 11. Agregar beneficiario a póliza de Vida
 
+Añade un beneficiario a una póliza de vida. **Máximo 2 beneficiarios por póliza**.
+
+**curl:**
 ```bash
 curl -X POST http://localhost:8080/api/v1/policies/1/beneficiaries \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
   -d '{
-    "fullName": "María García Pérez",
+    "fullName": "María García López",
     "documentNumber": "9876543210",
     "relationship": "Cónyuge",
     "benefitPercentage": 50.0
   }'
 ```
 
-### Códigos de Error
+### 12. Crear póliza de Vehículo
 
-| Status | Código Error | Significado |
-|--------|--------------|------------|
-| 400 | VALIDATION_ERROR | Datos inválidos o campos faltantes |
-| 400 | BUSINESS_RULE_VIOLATION | Violación de regla de negocio (ej: póliza VIDA duplicada) |
-| 404 | RESOURCE_NOT_FOUND | Recurso (cliente/póliza) no encontrado |
-| 500 | INTERNAL_SERVER_ERROR | Error inesperado del servidor |
+Crea una póliza de vehículo para asegurar uno o más vehículos.
 
-**Ejemplo: Error 400**
-```json
-{
-  "status": 400,
-  "errorCode": "VIDA_POLICY_ALREADY_EXISTS",
-  "message": "El cliente ya posee una póliza de Vida. Solo se permite 1 póliza de Vida por cliente.",
-  "path": "/api/v1/policies",
-  "timestamp": "2026-02-28T10:30:15"
-}
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "clientId": 1,
+    "policyType": "VEHICULO",
+    "startDate": "2026-03-01",
+    "endDate": "2027-03-01",
+    "premiumAmount": 1200000.00,
+    "status": "ACTIVA"
+  }'
 ```
+
+### 13. Agregar vehículo a póliza
+
+Añade un vehículo a una póliza de vehículos.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies/2/vehicles \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "brand": "Toyota",
+    "model": "Corolla",
+    "year": 2020,
+    "plate": "ABC-1234",
+    "vehicleType": "Sedán",
+    "engineCC": 2000
+  }'
+```
+
+### 14. Crear póliza de Salud
+
+Crea una póliza de salud que puede cubrir al cliente y sus dependientes.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "clientId": 1,
+    "policyType": "SALUD",
+    "startDate": "2026-03-01",
+    "endDate": "2027-03-01",
+    "premiumAmount": 800000.00,
+    "status": "ACTIVA"
+  }'
+```
+
+### 15. Agregar dependiente a póliza de Salud
+
+Añade un dependiente a una póliza de salud (puede ser pareja, hijo, padre, madre, etc.).
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies/3/dependents \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "fullName": "Pedro Pérez García",
+    "relationshipType": "Hijo",
+    "dateOfBirth": "2010-06-20",
+    "dependentPercentage": 25.0
+  }'
+```
+
+### 16. Obtener póliza por ID
+
+Recupera los detalles completos de una póliza.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/policies/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 17. Listar pólizas de un cliente
+
+Obtiene todas las pólizas asociadas a un cliente.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/policies/client/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 18. Listar dependientes de una póliza de Salud
+
+Obtiene todos los dependientes cubiertos por una póliza de salud.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/policies/3/dependents \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 19. Eliminar cliente
+
+Elimina un cliente y todas sus pólizas asociadas (operación en cascada).
+
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/clients/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+**Respuesta (204 No Content)**
+
+### 20. Logout
+
+Cierra la sesión del usuario.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/logout \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+**Respuesta (200 OK)**
 
 ---
 
-## 🧪 Pruebas
+## Pruebas
 
-### Ejecutar Tests
+Para correr pruebas unitarias:
 
 ```bash
-# Ejecutar todos los tests
 mvn test
-
-# Ejecutar tests con cobertura (JaCoCo)
-mvn test jacoco:report
-
-# Ver reporte de cobertura
-# Abierto: target/site/jacoco/index.html
 ```
 
-### Cobertura Esperada
-
-El proyecto está estructurado para alcanzar **80%+ de cobertura**:
-- **Service layer**: 85%+ (lógica de negocio compleja)
-- **Controller layer**: 80%+ (validaciones HTTP, mapeo DTOs)
-- **Repository layer**: <50% (delegado a Spring Data)
-
-### Ejemplos de Tests (estructura)
-
-```java
-// Tests para ClientService
-@SpringBootTest
-class ClientServiceTest {
-    @MockBean private ClientRepository repository;
-    @InjectMocks private ClientService service;
-    
-    @Test
-    void createClient_Success() { /* test */ }
-    
-    @Test
-    void createClient_DuplicateDocument_ThrowsException() { /* test */ }
-    
-    @Test
-    void getClientById_NotFound_ThrowsException() { /* test */ }
-}
-
-// Tests para PolicyService (reglas de negocio)
-@SpringBootTest
-class PolicyServiceTest {
-    @MockBean private PolicyRepository policyRepository;
-    @InjectMocks private PolicyService service;
-    
-    @Test
-    void createVidaPolicy_AlreadyExists_ThrowsBusinessRuleException() { /* test */ }
-    
-    @Test
-    void addBeneficiary_MaxExceeded_ThrowsException() { /* test */ }
-}
-
-// Tests para ClientController (MockMvc)
-@WebMvcTest(ClientController.class)
-class ClientControllerTest {
-    @MockBean private ClientService service;
-    @Autowired private MockMvc mockMvc;
-    
-    @Test
-    void createClient_Returns201() throws Exception {
-        mockMvc.perform(post("/api/v1/clients")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("..."))
-            .andExpect(status().isCreated());
-    }
-}
-```
-
----
-
-## ☁️ Arquitectura AWS Propuesta
-
-### Escenario: Migración a Producción en AWS
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                         AWS (Producción)                       │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  Route 53 (DNS)                                               │
-│      │                                                         │
-│      ├─→ ALB (Application Load Balancer)                      │
-│             │                                                 │
-│             ├─→ ECS Fargate (Contenedores Spring Boot)       │
-│             │   - Auto Scaling (2-10 instances)             │
-│             │   - Health Checks                              │
-│             │                                                 │
-│             └─→ RDS Aurora PostgreSQL                        │
-│                 - Multi-AZ (Alta disponibilidad)            │
-│                 - Backups automáticos (30 días)             │
-│                 - Read Replicas                              │
-│                                                                │
-│  CloudWatch (Monitoreo)                                       │
-│      └─→ Logs, Métricas, Alertas                            │
-│                                                                │
-│  VPC con Subnets privadas (para BD)                          │
-│  VPC con Subnets públicas (para ALB)                         │
-│  Security Groups (restricción de acceso)                     │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### Pasos para Migración
-
-#### 1. **Containerizar la Aplicación**
-
-Crear `Dockerfile`:
-```dockerfile
-FROM openjdk:17-jdk-slim
-WORKDIR /app
-COPY target/insurance-policy-service-1.0.0.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
-
-Construir imagen Docker:
-```bash
-docker build -t insurance-policy-service:1.0.0 .
-docker push [ECR_REGISTRY]/insurance-policy-service:1.0.0
-```
-
-#### 2. **Provisionar Base de Datos RDS Aurora PostgreSQL**
-
-```yaml
-RDS Aurora PostgreSQL:
-  - Instances: 2 (Primary + Standby Multi-AZ)
-  - Engine: aurora-postgresql 15
-  - Storage: 100 GB inicial
-  - Backups: Automáticos (30 días)
-  - Performance Insights: Habilitado
-```
-
-**Actualizar application.properties para RDS:**
-```properties
-spring.datasource.url=jdbc:postgresql://aurora.c1234567890.us-east-1.rds.amazonaws.com:5432/insurance
-spring.datasource.username=${DB_USERNAME}  # De Secrets Manager
-spring.datasource.password=${DB_PASSWORD}  # De Secrets Manager
-spring.jpa.database-platform=org.hibernate.dialect.PostgreSQL10Dialect
-spring.jpa.hibernate.ddl-auto=validate    # En producción, NO usar create-drop
-```
-
-#### 3. **Desplegar en ECS Fargate**
+Si tienes JaCoCo configurado:
 
 ```bash
-# Push imagen a ECR (Elastic Container Registry)
-aws ecr get-login-password | docker login --username AWS --password-stdin [ECR_REGISTRY]
-docker push [ECR_REGISTRY]/insurance-policy-service:1.0.0
-
-# Crear Task Definition en ECS
-# - CPU: 512, Memoria: 1024 MB (ajustar según carga)
-# - Port: 8080
-# - Environment: Pasar variables desde Secrets Manager
-
-# Crear ECS Service con Auto Scaling
-# - Desired Count: 2
-# - Min: 2, Max: 10
-# - Scaling Policy: Target CPU 70%
+mvn clean test jacoco:report
 ```
 
-#### 4. **Configurar ALB (Application Load Balancer)**
-
-```yaml
-ALB Configuration:
-  - Target Group:
-      Protocol: HTTP
-      Port: 8080
-      Health Check: GET /api/v1/health
-      Interval: 30s
-      Timeout: 5s
-      Healthy Threshold: 2
-      Unhealthy Threshold: 3
-  
-  - Listener:
-      Protocol: HTTPS (con ACM Certificate)
-      Port: 443
-      Forward to Target Group
-      
-  - Redirect HTTP → HTTPS
-```
-
-#### 5. **Monitoreo y Logs con CloudWatch**
-
-```yaml
-CloudWatch:
-  - Logs: /aws/ecs/insurance-policy-service
-    - Log Level: INFO (debug en desarrollo)
-    - Retention: 30 días
-  
-  - Métricas:
-      - CPUUtilization (target: 70%)
-      - MemoryUtilization (target: 80%)
-      - ECS TaskCount (min 2, max 10)
-      - RDS Connections
-      - ALB Request Count
-      - HTTP 4xx/5xx Errors
-  
-  - Alarms:
-      - Error Rate > 5%
-      - Response Time > 2s
-      - Database Connection Pool Exhausted
-```
-
-#### 6. **Continuidad Empresarial**
-
-```yaml
-Disaster Recovery:
-  - RDS Multi-Region Backup: Global Database
-  - Replicación a región secundaria (us-west-2)
-  - RPO (Recovery Point Objective): 1 hora
-  - RTO (Recovery Time Objective): 5 minutos
-  
-Seguridad:
-  - VPC Endpoints para servicios AWS
-  - Security Groups: Ingress solo desde ALB
-  - IAM Roles: Mínimos permisos para acceder RDS/Secrets
-  - Secrets Manager: Credenciales BD rotadas cada 30 días
-  - KMS Encryption: En tránsito (TLS) y en reposo
-```
-
-#### 7. **Estimación de Costos (Mensual)**
-
-| Servicio | Características | Costo Estimado |
-|----------|-----------------|----------------|
-| **ECS Fargate** | 2-10 tasks (512 CPU, 1 GB) | $100-300 |
-| **RDS Aurora** | 2 instances db.t3.micro, 100 GB | $150-200 |
-| **ALB** | 1 ALB con listeners/rules | $50-100 |
-| **CloudWatch** | Logs, Métricas, Alarms | $50-100 |
-| **Route 53** | Zona DNS, queries | $10-20 |
-| **NAT Gateway** | Outbound traffic | $30-50 |
-| **Total Estimado** | | **$390-770/mes** |
+El reporte suele quedar en:
+- `target/site/jacoco/index.html`
 
 ---
 
-## 💻 Stack Tecnológico
-
-### Backend
-- **Java 17**: Lenguaje de programación
-- **Spring Boot 3.2.0**: Framework principal
-- **Spring Data JPA**: ORM y acceso a datos
-- **Spring Web**: REST APIs
-- **H2 Database**: Base de datos en memoria (desarrollo)
-- **PostgreSQL**: Recomendado para producción
-- **Lombok**: Reducción de boilerplate
-- **SpringDoc OpenAPI 2.1.0**: Swagger/OpenAPI 3.0
-
-### Testing & Quality
-- **JUnit 5**: Framework de testing
-- **Mockito**: Mocking
-- **Spring Test/MockMvc**: Testing de controladores
-- **JaCoCo**: Análisis de cobertura
-
-### Build & Tools
-- **Maven 3.8+**: Gestor de dependencias y build
-- **Git**: Control de versiones
-
-### Otros
-- **SLF4J + Logback**: Logging
-- **Jackson**: Serialización JSON
-
----
-
-## 📝 Notas Importantes
-
-### Auditoría y Logs
-- Cada entidad tiene `createdAt` y `updatedAt` con hooks `@PrePersist` y `@PreUpdate`
-- Logs en nivel INFO para producción, DEBUG para desarrollo
-- Global exception handler registra errores en CloudWatch (AWS) o logs locales
-
-### Seguridad
-- **OWASP Top 10**: Validación de inputs, SQL injection prevention (JPA parameterizado)
-- **CORS**: Configurar según necesidad en producción
-- **Authentication/Authorization**: Agregar Spring Security + JWT para producción
-- **HTTPS**: Obligatorio en producción (ALB con ACM)
-
-### Escalabilidad
-- **Stateless**: Cada instancia es independiente (horizontal scaling)
-- **Connection Pooling**: HikariCP (por defecto en Spring Boot)
-- **Caching**: Opcional con Redis si se requiere (Spring Cache)
-- **CQRS/Event Sourcing**: Futuro si complejidad aumenta
-
-### Mejoras Futuras
-- [ ] Agregar Spring Security + JWT para autenticación
-- [ ] Implementar Spring Cache para pólizas frecuentes
-- [ ] Agregar Spring Batch para reportes/migraciones
-- [ ] Implementar API Gateway para versionado (v1, v2, etc.)
-- [ ] Agregar circuit breaker (Hystrix/Resilience4j)
-- [ ] Considerar Event-Driven Architecture para cambios de póliza
-
----
-
-## 🤝 Contribución y Soporte
-
-Cualquier pregunta o sugerencia sobre la arquitectura o implementación, contactar al equipo de desarrollo.
-
-**Última actualización:** Febrero 28, 2026
