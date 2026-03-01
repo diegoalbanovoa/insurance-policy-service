@@ -1,0 +1,98 @@
+# === BUILD & COMPILATION ===
+# Compiled class files
+*.class
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+.m2/
+
+# Gradle
+.gradle/
+gradle/wrapper/
+gradlew
+gradlew.bat
+build/
+
+# JAR/WAR files (except in src/)
+*.jar
+*.war
+dist/
+
+# === IDE & EDITOR ===
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.classpath
+.project
+.settings/
+*.code-workspace
+
+# === OPERATING SYSTEM ===
+.DS_Store
+Thumbs.db
+
+# === ENVIRONMENT & CONFIGURATION ===
+.env
+.env.local
+*.properties.local
+
+# === TESTING & COVERAGE ===
+jacoco.exec
+.coverage
+htmlReport/
+test-results/
+surefire-reports/
+
+# === DATABASE ===
+*.db
+*.sqlite
+*.mv.db
+*.trace.db
+data/
+
+# === LOGGING ===
+*.log
+logs/
+*.log.*
+
+# === TEMPORARY & CACHE ===
+*.tmp
+*.temp
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+
+# === NODE.JS (if frontend needed) ===
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# === DOCKER ===
+docker-compose.override.yml
+
+# === DOCUMENTATION - Only track README.md ===
+# Ignore all markdown files EXCEPT README.md
+/*.md
+!README.md
+
+# === KEEP ESSENTIAL FILES ===
+!.gitignore
+!pom.xml
+!mvnw
+!mvnw.cmd
+!src/
