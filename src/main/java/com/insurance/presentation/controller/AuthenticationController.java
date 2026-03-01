@@ -3,6 +3,8 @@ package com.insurance.presentation.controller;
 import com.insurance.application.dto.auth.AuthenticationRequest;
 import com.insurance.application.dto.auth.AuthenticationResponse;
 import com.insurance.application.dto.auth.RefreshTokenRequest;
+import com.insurance.application.dto.auth.RegistrationRequest;
+import com.insurance.application.service.AuthenticationService;
 import com.insurance.infrastructure.security.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -23,6 +26,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -34,6 +39,7 @@ public class AuthenticationController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationService authenticationService;
 
     @Value("${app.jwt.expiration}")
     private long jwtExpirationMs;
@@ -55,43 +61,52 @@ public class AuthenticationController {
     public ResponseEntity<AuthenticationResponse> login(@Valid @RequestBody AuthenticationRequest request) {
         try {
             log.info("Intento de login para usuario: {}", request.getEmail());
-
-            // Autenticar con el AuthenticationManager
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getPassword()
-                    )
-            );
-
-            // Generar tokens
-            String accessToken = jwtTokenProvider.generateToken(authentication);
-            String refreshToken = jwtTokenProvider.generateRefreshToken(request.getEmail());
-
-            log.info("Login exitoso para usuario: {}", request.getEmail());
-
-            // Construir respuesta
-            AuthenticationResponse response = AuthenticationResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshToken)
-                    .tokenType("Bearer")
-                    .expiresIn(jwtExpirationMs / 1000) // Convertir a segundos
-                    .username(request.getEmail())
-                    .email(request.getEmail())
-                    .build();
-
+            AuthenticationResponse response = authenticationService.authenticate(request);
             return ResponseEntity.ok(response);
-
-        } catch (AuthenticationException e) {
+        } catch (BadCredentialsException e) {
             log.warn("Fallo en autenticación: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(AuthenticationResponse.builder()
-                            .build());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (Exception e) {
             log.error("Error durante la autenticación: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(AuthenticationResponse.builder()
-                            .build());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Endpoint para registrar un nuevo usuario
+     * @param request Datos de registro
+     * @return Token JWT y refresh token para el nuevo usuario
+     */
+    @PostMapping("/register")
+    @Operation(summary = "Registrar nuevo usuario", description = "Crea un nuevo usuario y retorna JWT tokens")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Registro exitoso",
+                    content = @Content(mediaType = "application/json", 
+                            schema = @Schema(implementation = AuthenticationResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos o email duplicado"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegistrationRequest request) {
+        try {
+            log.info("Intento de registro para usuario: {}", request.getEmail());
+            AuthenticationResponse response = authenticationService.register(request);
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(
+                    Map.of(
+                            "message", "Usuario registrado exitosamente",
+                            "data", response
+                    )
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("Error en registro: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(
+                    Map.of("error", e.getMessage())
+            );
+        } catch (Exception e) {
+            log.error("Error durante el registro: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of("error", "Error interno del servidor")
+            );
         }
     }
 
