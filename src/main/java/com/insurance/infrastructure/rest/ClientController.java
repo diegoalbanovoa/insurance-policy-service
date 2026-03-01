@@ -21,31 +21,47 @@ import java.util.List;
 /**
  * Controlador REST para la gestión de clientes.
  * Expone endpoints para CRUD de clientes con validación completa.
+ * Todos los endpoints requieren autenticación JWT.
  */
 @RestController
 @RequestMapping("/api/v1/clients")
 @RequiredArgsConstructor
-@Tag(name = "Clients", description = "APIs para la gestión de clientes")
+@Tag(
+    name = "Clients",
+    description = "APIs para CRUD de clientes. Administra información personal, contacto y documentaria. " +
+                 "Requiere autenticación con JWT token."
+)
 public class ClientController {
 
     private final ClientService clientService;
 
     /**
-     * Crea un nuevo cliente.
+     * ENDPOINT: Crear nuevo cliente
+     *
+     * Registra un nuevo cliente validando que documento y email sean únicos.
+     * El cliente recibe un ID que se usa para futuras operaciones.
+     *
+     * Validaciones: documento único, email válido y único, datos completos.
      *
      * @param request datos del cliente a crear
-     * @return ResponseEntity con los datos del cliente creado (201 Created)
+     * @return ResponseEntity con los datos del cliente creado (201 Created) incluyendo ID asignado
      */
     @PostMapping
-    @Operation(summary = "Crear un nuevo cliente", 
-               description = "Crea un nuevo cliente con los datos proporcionados. " +
-                           "Valida documento y email únicos.")
+    @Operation(
+        summary = "Crear un nuevo cliente",
+        description = "Registra un cliente validando documento y email únicos. " +
+                     "Retorna el cliente con ID asignado e información de auditoría.",
+        tags = {"Operaciones básicas"}
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Cliente creado exitosamente",
-                    content = @Content(mediaType = "application/json", 
-                                     schema = @Schema(implementation = ClientResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Validación fallida en los datos"),
-        @ApiResponse(responseCode = "409", description = "Cliente con documento o email duplicado")
+        @ApiResponse(
+            responseCode = "201",
+            description = "Cliente creado exitosamente con ID asignado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ClientResponse.class))
+        ),
+        @ApiResponse(responseCode = "400", description = "Validación fallida: datos malformados o incompletos"),
+        @ApiResponse(responseCode = "409", description = "Conflicto: documento o email ya existe en el sistema"),
+        @ApiResponse(responseCode = "401", description = "No autorizado: token JWT inválido o expirado")
     })
     public ResponseEntity<ClientResponse> createClient(@Valid @RequestBody ClientCreateRequest request) {
         ClientResponse response = clientService.createClient(request);
