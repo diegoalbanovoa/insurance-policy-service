@@ -10,13 +10,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.insurance.application.dto.BeneficiaryCreateRequest;
-import com.insurance.application.dto.BeneficiaryResponse;
 import com.insurance.application.dto.DependentCreateRequest;
-import com.insurance.application.dto.DependentResponse;
 import com.insurance.application.dto.PolicyCreateRequest;
-import com.insurance.application.dto.PolicyResponse;
 import com.insurance.application.dto.VehicleCreateRequest;
-import com.insurance.application.dto.VehicleResponse;
 import com.insurance.application.usecase.PolicyService;
 
 @ExtendWith(MockitoExtension.class)
