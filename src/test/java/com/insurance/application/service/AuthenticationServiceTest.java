@@ -117,6 +117,7 @@ class AuthenticationServiceTest {
 
     @Test
     @DisplayName("Should register new user successfully")
+    @SuppressWarnings("null")
     void testRegister_Success() {
         // Arrange
         RegistrationRequest request = RegistrationRequest.builder()
@@ -145,6 +146,7 @@ class AuthenticationServiceTest {
 
     @Test
     @DisplayName("Should reject registration with non-matching passwords")
+    @SuppressWarnings("null")
     void testRegister_PasswordMismatch() {
         // Arrange
         RegistrationRequest request = RegistrationRequest.builder()
@@ -163,6 +165,7 @@ class AuthenticationServiceTest {
 
     @Test
     @DisplayName("Should reject registration with existing email")
+    @SuppressWarnings("null")
     void testRegister_EmailAlreadyExists() {
         // Arrange
         RegistrationRequest request = RegistrationRequest.builder()

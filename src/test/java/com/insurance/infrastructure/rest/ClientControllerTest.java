@@ -63,6 +63,7 @@ public class ClientControllerTest {
 
     @Test
     @DisplayName("Should create client successfully and return 201")
+    @SuppressWarnings("null")
     void testCreateClientSuccess() {
         when(clientService.createClient(any(ClientCreateRequest.class)))
                 .thenReturn(clientResponse);
@@ -71,12 +72,14 @@ public class ClientControllerTest {
 
         assertNotNull(response);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals("Juan", response.getBody().getNombres());
         verify(clientService, times(1)).createClient(any(ClientCreateRequest.class));
     }
 
     @Test
     @DisplayName("Should retrieve client by ID successfully")
+    @SuppressWarnings("null")
     void testGetClientByIdSuccess() {
         when(clientService.getClientById(1L))
                 .thenReturn(clientResponse);
@@ -85,12 +88,14 @@ public class ClientControllerTest {
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals(1L, response.getBody().getId());
         verify(clientService, times(1)).getClientById(1L);
     }
 
     @Test
     @DisplayName("Should get all clients")
+    @SuppressWarnings("null")
     void testGetAllClientsSuccess() {
         ClientResponse client2 = ClientResponse.builder()
                 .id(2L)
@@ -103,12 +108,14 @@ public class ClientControllerTest {
         ResponseEntity<List<ClientResponse>> response = clientController.getAllClients();
 
         assertNotNull(response);
+        assertNotNull(response.getBody());
         assertEquals(2, response.getBody().size());
         verify(clientService, times(1)).getAllClients();
     }
 
     @Test
     @DisplayName("Should update client successfully")
+    @SuppressWarnings("null")
     void testUpdateClientSuccess() {
         ClientResponse updatedResponse = ClientResponse.builder()
                 .id(1L)
@@ -121,6 +128,7 @@ public class ClientControllerTest {
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals("Juan Updated", response.getBody().getNombres());
     }
 

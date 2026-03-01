@@ -62,6 +62,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should create client successfully when document and email are unique")
+    @SuppressWarnings("null")
     void testCreateClientSuccess() {
         // Given
         when(clientRepository.findByTipoDocumentoAndNumeroDocumento(
@@ -87,6 +88,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should throw BusinessRuleException when document already exists")
+    @SuppressWarnings("null")
     void testCreateClientDuplicateDocument() {
         // Given
         when(clientRepository.findByTipoDocumentoAndNumeroDocumento(
@@ -104,6 +106,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should throw BusinessRuleException when email already exists")
+    @SuppressWarnings("null")
     void testCreateClientDuplicateEmail() {
         // Given
         when(clientRepository.findByTipoDocumentoAndNumeroDocumento(
@@ -218,6 +221,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should update client successfully")
+    @SuppressWarnings("null")
     void testUpdateClientSuccess() {
         // Given
         ClientCreateRequest updateRequest = ClientCreateRequest.builder()
@@ -262,6 +266,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should throw ResourceNotFoundException when updating non-existent client")
+    @SuppressWarnings("null")
     void testUpdateClientNotFound() {
         // Given
         when(clientRepository.findById(999L))
@@ -277,6 +282,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should throw BusinessRuleException when updating with duplicate email")
+    @SuppressWarnings("null")
     void testUpdateClientDuplicateEmail() {
         // Given
         ClientCreateRequest updateRequest = ClientCreateRequest.builder()
@@ -322,6 +328,7 @@ public class ClientServiceTest {
 
     @Test
     @DisplayName("Should throw ResourceNotFoundException when deleting non-existent client")
+    @SuppressWarnings("null")
     void testDeleteClientNotFound() {
         // Given
         when(clientRepository.existsById(999L)).thenReturn(false);

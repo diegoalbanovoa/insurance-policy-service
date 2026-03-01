@@ -27,6 +27,7 @@ public class ClientService {
      * @return DTO del cliente creado
      * @throws BusinessRuleException si el cliente ya existe (documento duplicado o email duplicado)
      */
+    @SuppressWarnings("null")
     public ClientResponse createClient(ClientCreateRequest request) {
         // Validar que no exista cliente con el mismo documento
         clientRepository.findByTipoDocumentoAndNumeroDocumento(
@@ -67,6 +68,7 @@ public class ClientService {
      * @throws ResourceNotFoundException si el cliente no existe
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public ClientResponse getClientById(Long id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente", id));
@@ -111,6 +113,7 @@ public class ClientService {
      * @throws ResourceNotFoundException si el cliente no existe
      * @throws BusinessRuleException si los nuevos datos violarían restricciones únicas
      */
+    @SuppressWarnings("null")
     public ClientResponse updateClient(Long id, ClientCreateRequest request) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente", id));
@@ -139,6 +142,7 @@ public class ClientService {
      * @param id identificador del cliente
      * @throws ResourceNotFoundException si el cliente no existe
      */
+    @SuppressWarnings("null")
     public void deleteClient(Long id) {
         if (!clientRepository.existsById(id)) {
             throw new ResourceNotFoundException("Cliente", id);

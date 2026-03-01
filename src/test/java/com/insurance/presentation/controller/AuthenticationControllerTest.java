@@ -79,6 +79,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should login successfully with valid credentials")
+    @SuppressWarnings("null")
     void testLogin_Success() throws Exception {
         // Arrange
         when(authenticationService.authenticate(any(AuthenticationRequest.class)))
@@ -97,6 +98,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should return 401 for invalid credentials")
+    @SuppressWarnings("null")
     void testLogin_InvalidCredentials() throws Exception {
         // Arrange
         when(authenticationService.authenticate(any(AuthenticationRequest.class)))
@@ -111,6 +113,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should return 400 for missing email")
+    @SuppressWarnings("null")
     void testLogin_MissingEmail() throws Exception {
         // Arrange
         AuthenticationRequest invalidRequest = AuthenticationRequest.builder()
@@ -126,6 +129,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should register successfully with valid data")
+    @SuppressWarnings("null")
     void testRegister_Success() throws Exception {
         // Arrange
         when(authenticationService.register(any(RegistrationRequest.class)))
@@ -143,6 +147,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should return 400 for password mismatch during registration")
+    @SuppressWarnings("null")
     void testRegister_PasswordMismatch() throws Exception {
         // Arrange
         when(authenticationService.register(any(RegistrationRequest.class)))
@@ -158,6 +163,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should return 400 for existing email during registration")
+    @SuppressWarnings("null")
     void testRegister_EmailAlreadyExists() throws Exception {
         // Arrange
         when(authenticationService.register(any(RegistrationRequest.class)))
@@ -173,6 +179,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should return 400 for short password during registration")
+    @SuppressWarnings("null")
     void testRegister_PasswordTooShort() throws Exception {
         // Arrange
         RegistrationRequest shortPassRequest = RegistrationRequest.builder()
@@ -191,6 +198,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should refresh token successfully")
+    @SuppressWarnings("null")
     void testRefresh_Success() throws Exception {
         // Arrange
         when(jwtTokenProvider.validateToken("refresh-token")).thenReturn(true);
@@ -208,6 +216,7 @@ class AuthenticationControllerTest {
 
     @Test
     @DisplayName("Should return 401 for invalid refresh token")
+    @SuppressWarnings("null")
     void testRefresh_InvalidToken() throws Exception {
         // Arrange
         when(jwtTokenProvider.validateToken("invalid-refresh-token")).thenReturn(false);

@@ -103,6 +103,7 @@ public class AuthenticationService {
                 .accountNonLocked(true)
                 .build();
 
+        @SuppressWarnings("null")
         User savedUser = userRepository.save(newUser);
         log.info("Usuario registrado exitosamente: {}", savedUser.getEmail());
 
