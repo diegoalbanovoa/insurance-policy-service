@@ -7,7 +7,7 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 @Schema(description = "Datos de un dependiente")
 public class DependentResponse {
 

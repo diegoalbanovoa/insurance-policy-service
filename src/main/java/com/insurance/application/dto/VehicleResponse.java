@@ -6,7 +6,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 @Schema(description = "Datos de un vehículo asegurado")
 public class VehicleResponse {
 
