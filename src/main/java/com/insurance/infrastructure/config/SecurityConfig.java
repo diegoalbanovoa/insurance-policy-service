@@ -31,13 +31,13 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${app.cors.origins}")
+    @Value("${app.cors.allowed-origins}")
     private String corsOrigins;
 
-    @Value("${app.cors.methods}")
+    @Value("${app.cors.allowed-methods}")
     private String corsMethods;
 
-    @Value("${app.cors.headers}")
+    @Value("${app.cors.allowed-headers}")
     private String corsHeaders;
 
     @Value("${app.cors.max-age}")
