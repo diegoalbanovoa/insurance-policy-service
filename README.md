@@ -174,6 +174,370 @@ La aplicación queda disponible en:
 
 ---
 
+## Ejemplos de API
+
+A continuación se muestran ejemplos ordenados de cómo usar todos los endpoints del sistema. Se recomienda ejecutarlos en este orden para probar el flujo completo.
+
+### 1. Registro de usuario
+
+Crea una nueva cuenta de usuario que será utilizada para autenticar futuras peticiones.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan.perez@insurance.com",
+    "password": "SecurePass123!",
+    "confirmPassword": "SecurePass123!",
+    "fullName": "Juan Pérez García"
+  }'
+```
+
+**Respuesta (201 Created):**
+```json
+{
+  "message": "Usuario registrado exitosamente. Puede iniciar sesión inmediatamente.",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+    "refreshToken": "eyJhbGciOiJIUzUxMiJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "username": "juan.perez@insurance.com",
+    "email": "juan.perez@insurance.com"
+  }
+}
+```
+
+**Nota importante:** Guardar el `accessToken` para usarlo en futuras peticiones en el header `Authorization: Bearer {accessToken}`.
+
+### 2. Login
+
+Autentica un usuario existente usando email y contraseña.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan.perez@insurance.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+**Respuesta (200 OK):**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzUxMiJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 86400000,
+  "username": "juan.perez@insurance.com",
+  "email": "juan.perez@insurance.com"
+}
+```
+
+### 3. Renovar token
+
+Obtiene un nuevo `accessToken` usando el `refreshToken` (válido 7 días sin necesidad de volver a fazer login).
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzUxMiJ9..."
+  }'
+```
+
+### 4. Validar token
+
+Verifica si un JWT token es válido y no ha expirado.
+
+**curl:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/auth/validate?token=eyJhbGciOiJIUzUxMiJ9..."
+```
+
+**Respuesta:**
+```
+true
+```
+
+### 5. Crear cliente
+
+Registra un nuevo cliente en el sistema. **Requiere autenticación JWT**.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/clients \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "tipoDocumento": "CC",
+    "numeroDocumento": "1234567890",
+    "nombres": "Juan",
+    "apellidos": "Pérez García",
+    "email": "juan.perez@insurance.com",
+    "telefono": "+573201234567",
+    "fechaNacimiento": "1990-05-15"
+  }'
+```
+
+**Respuesta (201 Created):**
+```json
+{
+  "id": 1,
+  "tipoDocumento": "CC",
+  "numeroDocumento": "1234567890",
+  "nombres": "Juan",
+  "apellidos": "Pérez García",
+  "email": "juan.perez@insurance.com",
+  "telefono": "+573201234567",
+  "fechaNacimiento": "1990-05-15",
+  "fullName": "Juan Pérez García",
+  "createdAt": "2026-02-28",
+  "updatedAt": "2026-02-28"
+}
+```
+
+### 6. Obtener cliente por ID
+
+Recupera los datos de un cliente específico.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/clients/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 7. Listar todos los clientes
+
+Obtiene la lista completa de clientes registrados.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 8. Buscar cliente por documento
+
+Encuentra un cliente usando su tipo y número de documento.
+
+**curl:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/clients/document/CC/1234567890" \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 9. Actualizar cliente
+
+Modifica los datos de un cliente existente.
+
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/clients/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "tipoDocumento": "CC",
+    "numeroDocumento": "1234567890",
+    "nombres": "Juan",
+    "apellidos": "Pérez García",
+    "email": "juan.perez.actualizado@insurance.com",
+    "telefono": "+573209876543",
+    "fechaNacimiento": "1990-05-15"
+  }'
+```
+
+### 10. Crear póliza de Vida
+
+Crea una póliza de vida para un cliente. **Un cliente puede tener máximo 1 póliza de vida**.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "clientId": 1,
+    "policyType": "VIDA",
+    "startDate": "2026-03-01",
+    "endDate": "2027-03-01",
+    "premiumAmount": 500000.00,
+    "status": "ACTIVA"
+  }'
+```
+
+**Respuesta (201 Created):**
+```json
+{
+  "id": 1,
+  "policyNumber": "POL-2026-123456",
+  "policyType": "VIDA",
+  "clientId": 1,
+  "clientName": "Juan Pérez García",
+  "startDate": "2026-03-01",
+  "endDate": "2027-03-01",
+  "premiumAmount": 500000.00,
+  "status": "ACTIVA",
+  "isActive": true,
+  "beneficiaries": [],
+  "vehicles": [],
+  "dependents": [],
+  "createdAt": "2026-02-28",
+  "updatedAt": "2026-02-28"
+}
+```
+
+### 11. Agregar beneficiario a póliza de Vida
+
+Añade un beneficiario a una póliza de vida. **Máximo 2 beneficiarios por póliza**.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies/1/beneficiaries \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "fullName": "María García López",
+    "documentNumber": "9876543210",
+    "relationship": "Cónyuge",
+    "benefitPercentage": 50.0
+  }'
+```
+
+### 12. Crear póliza de Vehículo
+
+Crea una póliza de vehículo para asegurar uno o más vehículos.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "clientId": 1,
+    "policyType": "VEHICULO",
+    "startDate": "2026-03-01",
+    "endDate": "2027-03-01",
+    "premiumAmount": 1200000.00,
+    "status": "ACTIVA"
+  }'
+```
+
+### 13. Agregar vehículo a póliza
+
+Añade un vehículo a una póliza de vehículos.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies/2/vehicles \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "brand": "Toyota",
+    "model": "Corolla",
+    "year": 2020,
+    "plate": "ABC-1234",
+    "vehicleType": "Sedán",
+    "engineCC": 2000
+  }'
+```
+
+### 14. Crear póliza de Salud
+
+Crea una póliza de salud que puede cubrir al cliente y sus dependientes.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "clientId": 1,
+    "policyType": "SALUD",
+    "startDate": "2026-03-01",
+    "endDate": "2027-03-01",
+    "premiumAmount": 800000.00,
+    "status": "ACTIVA"
+  }'
+```
+
+### 15. Agregar dependiente a póliza de Salud
+
+Añade un dependiente a una póliza de salud (puede ser pareja, hijo, padre, madre, etc.).
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/policies/3/dependents \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "fullName": "Pedro Pérez García",
+    "relationshipType": "Hijo",
+    "dateOfBirth": "2010-06-20",
+    "dependentPercentage": 25.0
+  }'
+```
+
+### 16. Obtener póliza por ID
+
+Recupera los detalles completos de una póliza.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/policies/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 17. Listar pólizas de un cliente
+
+Obtiene todas las pólizas asociadas a un cliente.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/policies/client/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 18. Listar dependientes de una póliza de Salud
+
+Obtiene todos los dependientes cubiertos por una póliza de salud.
+
+**curl:**
+```bash
+curl -X GET http://localhost:8080/api/v1/policies/3/dependents \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+### 19. Eliminar cliente
+
+Elimina un cliente y todas sus pólizas asociadas (operación en cascada).
+
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/clients/1 \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+**Respuesta (204 No Content)**
+
+### 20. Logout
+
+Cierra la sesión del usuario.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/logout \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+**Respuesta (200 OK)**
+
+---
+
 ## Pruebas
 
 Para correr pruebas unitarias:

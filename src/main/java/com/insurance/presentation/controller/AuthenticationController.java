@@ -26,7 +26,7 @@ import jakarta.validation.Valid;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @Validated
 @RequiredArgsConstructor
 @Slf4j

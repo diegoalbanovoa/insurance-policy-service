@@ -15,7 +15,7 @@ import java.util.Map;
  * Controlador REST para el estado de salud de la aplicación.
  */
 @RestController
-@RequestMapping("/api/v1/health")
+@RequestMapping("/health")
 @Tag(name = "Health", description = "APIs para verificar el estado de la aplicación")
 public class HealthController {
 

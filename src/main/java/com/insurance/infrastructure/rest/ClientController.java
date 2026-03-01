@@ -24,7 +24,7 @@ import java.util.List;
  * Todos los endpoints requieren autenticación JWT.
  */
 @RestController
-@RequestMapping("/api/v1/clients")
+@RequestMapping("/clients")
 @RequiredArgsConstructor
 @Tag(
     name = "Clients",

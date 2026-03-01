@@ -22,7 +22,7 @@ import java.util.List;
  * Expone endpoints para CRUD de pólizas y gestión de beneficiarios, vehículos y dependientes.
  */
 @RestController
-@RequestMapping("/api/v1/policies")
+@RequestMapping("/policies")
 @RequiredArgsConstructor
 @Tag(name = "Policies", description = "APIs para la gestión de pólizas")
 public class PolicyController {
