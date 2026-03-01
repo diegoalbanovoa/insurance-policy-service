@@ -44,9 +44,13 @@ dist/
 Thumbs.db
 
 # === ENVIRONMENT & CONFIGURATION ===
+# IMPORTANT: .env contiene datos sensibles y NUNCA debe ser commiteado
 .env
 .env.local
+.env.production
 *.properties.local
+# .env.example SÍ debe ser commiteado como referencia
+!.env.example
 
 # === TESTING & COVERAGE ===
 jacoco.exec
