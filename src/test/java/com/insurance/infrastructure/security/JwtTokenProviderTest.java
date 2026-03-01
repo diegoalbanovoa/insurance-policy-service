@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-        "app.jwt.secret=test-secret-key-min-32-characters-long-test",
+        "app.jwt.secret=MyTestInsuranceServiceSuperSecureKeyFor512BitsHashing2024TestingEnvironment!@#",
         "app.jwt.expiration=3600000",
         "app.jwt.refresh-expiration=86400000"
 })
